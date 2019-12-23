@@ -35,6 +35,8 @@ class ClassActivateMap:
             if checkpoint:
                 saver.restore(self.sess, checkpoint)
                 print("[INFO] restore from the checkpoint {0}".format(checkpoint))
+                # for t in tf.get_default_graph().as_graph_def().node:
+                #     print(t.name)
             # 定义输入接口
             self.input_tensor_lst = []
             for tensor_name in self.input_tensor_name_lst:
@@ -64,7 +66,7 @@ class ClassActivateMap:
             # [batch_size, max_sentence_len, 1] through boardcasting
             L_gradcam = tf.nn.relu(tf.reduce_sum(tf.multiply(conv_out, alpha_c_k), axis=-1))
             #最大值归一化
-            L_gradcam = tf.div(L_gradcam, tf.reduce_max(L_gradcam))
+            L_gradcam = tf.div(L_gradcam, tf.reduce_max(L_gradcam) + tf.constant(1e-5))
         return tf.squeeze(L_gradcam)
 
 
@@ -72,18 +74,24 @@ class ClassActivateMap:
         #获取最大logits
         score = self.sess.run(self.logits, feed_dict)
         score_label_tpl = sorted(zip(score[0], list(self.label2id_dct.keys())), key=lambda x: x[0], reverse=True)
-        return score_label_tpl[0][1]
+        for sco, label in score_label_tpl:
+            print((label, sco))
+        # #
+        # conv = self.get_conv_out('representation_layer/conv-maxpool-3/relu:0')
+        # print('conv output:{}'.format(self.sess.run(conv, feed_dict)))
+        return score_label_tpl[0]
 
 
     def get_text_final_cam(self, input_value_lst, target_label, max_sentence_len, true_length):
         #构造输入feed_dict
         feed_dict = dict(zip(self.input_tensor_name_lst, input_value_lst))
         #确定label id
-        if target_label=='top':
-            label = self.get_rank_label(feed_dict)
+        if target_label == 'top':
+            score, label = self.get_rank_label(feed_dict)
+            print('the selected label: {}, score:{:.4}'.format(label, 1/(1+np.exp(-score))))
         else:
             label = target_label
-        print('the selected label is: {}'.format(label))
+            print('the selected label: {}'.format(label))
         #用于累积每个filter map给出的文本片段重要性
         cam = np.zeros(max_sentence_len, dtype=np.float32)
         #用于累积每个文本片段被这些filter map卷积过多少次，该值后面用于归一化
