@@ -73,7 +73,7 @@ if __name__ == '__main__':
                            conv_layer_tensor_name2filter_size_dct=conv_name2filtersize_dct,
                            logits_tensor_name=logits_name)
     #输入文本
-    text = 'Using VS 2005 to design abstract forms'
+    text = 'How do you stop a Visual Studio generated web service proxy class from encoding?'
     #
     max_sentence_len = 68
     #
